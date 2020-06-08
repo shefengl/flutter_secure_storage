@@ -40,7 +40,6 @@ static NSString *const InvalidParameters = @"Invalid parameter's type";
         NSString *key = arguments[@"key"];
         NSString *groupId = options[@"groupId"];
         NSString *value = [self read:key forGroup:groupId];
-        
         result(value);
     } else
     if ([@"write" isEqualToString:call.method]) {
@@ -72,7 +71,15 @@ static NSString *const InvalidParameters = @"Invalid parameter's type";
         NSDictionary *value = [self readAll: groupId];
 
         result(value);
-    }else {
+    }else if ([@"contain" isEqualToString:call.method]) {
+        NSString *key = arguments[@"key"];
+        NSString *groupId = options[@"groupId"];
+        NSString *value = [self contain:key forGroup:groupId];
+
+        result(value);
+    }
+    
+    else {
         result(FlutterMethodNotImplemented);
     }
 }
@@ -102,6 +109,10 @@ static NSString *const InvalidParameters = @"Invalid parameter's type";
         }
     }
     
+    SecAccessControlRef secControl;
+    CFErrorRef *error = nil;
+    secControl =  SecAccessControlCreateWithFlags(kCFAllocatorDefault, attrAccessible, kSecAccessControlBiometryAny, error);
+    
     OSStatus status;
     status = SecItemCopyMatching((__bridge CFDictionaryRef)search, NULL);
     if (status == noErr){
@@ -109,7 +120,7 @@ static NSString *const InvalidParameters = @"Invalid parameter's type";
         
         NSDictionary *update = @{
             (__bridge id)kSecValueData: [value dataUsingEncoding:NSUTF8StringEncoding],
-            (__bridge id)kSecAttrAccessible: (__bridge id) attrAccessible,
+            (__bridge id)kSecAttrAccessControl: (__bridge_transfer id) secControl,
         };
         
         status = SecItemUpdate((__bridge CFDictionaryRef)search, (__bridge CFDictionaryRef)update);
@@ -119,8 +130,8 @@ static NSString *const InvalidParameters = @"Invalid parameter's type";
     }else{
         search[(__bridge id)kSecValueData] = [value dataUsingEncoding:NSUTF8StringEncoding];
         search[(__bridge id)kSecMatchLimit] = nil;
-        search[(__bridge id)kSecAttrAccessible] = (__bridge id) attrAccessible;
-               
+        search[(__bridge id)kSecAttrAccessControl] = (__bridge_transfer id) secControl;
+
         status = SecItemAdd((__bridge CFDictionaryRef)search, NULL);
         if (status != noErr){
             NSLog(@"SecItemAdd status = %d", (int) status);
@@ -147,6 +158,28 @@ static NSString *const InvalidParameters = @"Invalid parameter's type";
     }
     
     return value;
+}
+
+- (NSString *)contain:(NSString *)key forGroup:(NSString *)groupId {
+    NSMutableDictionary *search = [self.query mutableCopy];
+    if(groupId != nil) {
+     search[(__bridge id)kSecAttrAccessGroup] = groupId;
+    }
+    search[(__bridge id)kSecAttrAccount] = key;
+    search[(__bridge id)kSecReturnData] = (__bridge id)kCFBooleanTrue;
+    search[(__bridge id)kSecUseAuthenticationUI] =  (__bridge id) kSecUseAuthenticationUIFail;
+    
+    CFDataRef resultData = NULL;
+    
+    OSStatus status;
+    status = SecItemCopyMatching((__bridge CFDictionaryRef)search, (CFTypeRef*)&resultData);
+   if (status == errSecInteractionNotAllowed || status == errSecSuccess) {
+        return @"true";
+   } else if (status == errSecItemNotFound) {
+       return @"false";
+   }
+    
+    return @"false";
 }
 
 - (void)delete:(NSString *)key forGroup:(NSString *)groupId {
