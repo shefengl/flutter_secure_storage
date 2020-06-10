@@ -268,6 +268,11 @@ public class FlutterSecureStoragePlugin implements MethodCallHandler, FlutterPlu
                 createBioCallback(call, result);
                 switch (call.method) {
                     case "write": {
+                        if (authInProgress.get()){
+                            result.error("Exception encountered", call.method, null);
+                            return;
+                        }
+                        authInProgress.set(true);
                         String key = getKeyFromCall(call);
                         Map arguments = (Map) call.arguments;
 

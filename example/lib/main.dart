@@ -44,7 +44,8 @@ class _ItemsWidgetState extends State<ItemsWidget> {
   void _addNewItem() async {
     final String key = "dddd";
     final String value = _randomValue();
-    await _storage.write(key: key, value: value);
+
+    _storage.write(key: key, value: value).then((value) => print('write   dsadf'));
     // try {
 
     // } on PlatformException catch (e) {
