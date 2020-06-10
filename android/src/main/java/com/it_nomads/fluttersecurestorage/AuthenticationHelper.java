@@ -45,7 +45,7 @@ public class AuthenticationHelper extends BiometricPrompt.AuthenticationCallback
          * Called when authentication failed due to user. For instance, when user cancels the auth or
          * quits the app.
          */
-        void onFailure();
+        void onFailure(BiometricPrompt biometricPrompt);
 
         /**
          * Called when authentication fails due to non-user related problems such as system errors,
@@ -66,6 +66,7 @@ public class AuthenticationHelper extends BiometricPrompt.AuthenticationCallback
     private final UiThreadExecutor uiThreadExecutor;
     private boolean activityPaused = false;
     private androidx.biometric.BiometricPrompt biometricPrompt;
+    private int count = 0;
 
     AuthenticationHelper(
             Lifecycle lifecycle,
@@ -157,11 +158,11 @@ public class AuthenticationHelper extends BiometricPrompt.AuthenticationCallback
                 if (activityPaused && isAuthSticky) {
                     return;
                 } else {
-                    completionHandler.onFailure();
+                    completionHandler.onFailure(biometricPrompt);
                 }
                 break;
             default:
-                completionHandler.onFailure();
+                completionHandler.onFailure(biometricPrompt);
         }
         stop();
     }
@@ -175,7 +176,11 @@ public class AuthenticationHelper extends BiometricPrompt.AuthenticationCallback
     @Override
     public void onAuthenticationFailed() {
         Log.e("AuthFailed", "AuthFailed");
-        completionHandler.onFailure();
+       if (count == 2) {
+           completionHandler.onFailure(biometricPrompt);
+           count = 0;
+       }
+       count ++;
     }
 
     /**

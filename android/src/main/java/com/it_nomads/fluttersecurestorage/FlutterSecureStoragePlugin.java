@@ -23,6 +23,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
@@ -45,6 +46,7 @@ public class FlutterSecureStoragePlugin implements MethodCallHandler, FlutterPlu
     private Charset charset;
     private StorageCipher storageCipher;
     private AuthenticationHelper authenticationHelper;
+    private final AtomicBoolean authInProgress = new AtomicBoolean(false);
 
     private Activity activity;
     private Lifecycle lifecycle;
@@ -82,17 +84,33 @@ public class FlutterSecureStoragePlugin implements MethodCallHandler, FlutterPlu
                 new AuthenticationHelper.AuthCompletionHandler() {
                     @Override
                     public void onSuccess(BiometricPrompt.CryptoObject cryptoObject) {
-                        processSuccess(cryptoObject, methodCall, result);
+                        if (authInProgress.compareAndSet(true, false)) {
+                            processSuccess(cryptoObject, methodCall, result);
+                        }
                     }
 
                     @Override
-                    public void onFailure() {
-                        result.success(null);
+                    public void onFailure(final BiometricPrompt biometricPrompt) {
+                        if (authInProgress.compareAndSet(true, false)) {
+                            result.success(null);
+                            if (biometricPrompt != null) {
+                                Handler timoutHandler = new Handler();
+                                timoutHandler.postDelayed(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        biometricPrompt.cancelAuthentication();
+                                    }
+                                }, 3000);
+
+                            }
+                        }
                     }
 
                     @Override
                     public void onError(String code, String error) {
-
+                        if (authInProgress.compareAndSet(true, false)) {
+                            result.error(code, error, null);
+                        }
                     }
                 });
     }
@@ -259,8 +277,12 @@ public class FlutterSecureStoragePlugin implements MethodCallHandler, FlutterPlu
                         break;
                     }
                     case "read": {
+                        if (authInProgress.get()){
+                            result.error("Exception encountered", call.method, null);
+                            return;
+                        }
+                        authInProgress.set(true);
                         String key = getKeyFromCall(call);
-
                         String value = read(key);
                         break;
                     }
