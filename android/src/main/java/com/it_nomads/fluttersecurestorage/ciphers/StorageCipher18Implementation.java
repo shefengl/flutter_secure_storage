@@ -12,6 +12,7 @@ import androidx.biometric.BiometricPrompt;
 import com.it_nomads.fluttersecurestorage.AuthenticationHelper;
 
 import java.security.Key;
+import java.security.PublicKey;
 import java.security.SecureRandom;
 
 import javax.crypto.Cipher;
@@ -75,12 +76,12 @@ public class StorageCipher18Implementation implements StorageCipher {
 
         cipher.init(Cipher.ENCRYPT_MODE, mRsaCipher.getPublicKey());
 
-//        activity.runOnUiThread(new Runnable() {
-//            @Override
-//            public void run() {
-//                authenticationHelper.authenticate(new BiometricPrompt.CryptoObject(cipher));
-//            }
-//        });
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                authenticationHelper.authenticate(new BiometricPrompt.CryptoObject(cipher));
+            }
+        });
 
 //        byte[] payload = cipher.doFinal(input);
 //        byte[] combined = new byte[iv.length + payload.length];

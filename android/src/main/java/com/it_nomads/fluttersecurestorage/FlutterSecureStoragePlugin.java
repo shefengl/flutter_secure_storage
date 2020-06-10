@@ -212,10 +212,10 @@ public class FlutterSecureStoragePlugin implements MethodCallHandler, FlutterPlu
 
     private void write(final String key, final String value) throws Exception {
         byte[] result = storageCipher.encrypt(value.getBytes(charset), activity, authenticationHelper);
-        SharedPreferences.Editor editor = preferences.edit();
-
-        editor.putString(key, Base64.encodeToString(result, 0));
-        editor.commit();
+//        SharedPreferences.Editor editor = preferences.edit();
+//
+//        editor.putString(key, Base64.encodeToString(result, 0));
+//        editor.commit();
     }
 
     private String read(String key) throws Exception {

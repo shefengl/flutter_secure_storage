@@ -138,11 +138,8 @@ public class AuthenticationHelper extends BiometricPrompt.AuthenticationCallback
                 break;
             case androidx.biometric.BiometricPrompt.ERROR_NO_SPACE:
             case androidx.biometric.BiometricPrompt.ERROR_NO_BIOMETRICS:
-//                if (call.argument("useErrorDialogs")) {
-////                    showGoToSettingsDialog();
-//                    return;
-//                }
-                completionHandler.onError("NotEnrolled", "No Biometrics enrolled on this device.");
+
+                    showGoToSettingsDialog();
                 break;
             case androidx.biometric.BiometricPrompt.ERROR_HW_UNAVAILABLE:
             case androidx.biometric.BiometricPrompt.ERROR_HW_NOT_PRESENT:
@@ -229,37 +226,36 @@ public class AuthenticationHelper extends BiometricPrompt.AuthenticationCallback
 
     // Suppress inflateParams lint because dialogs do not need to attach to a parent view.
     @SuppressLint("InflateParams")
-//    private void showGoToSettingsDialog() {
-//        View view = LayoutInflater.from(activity).inflate(R.layout.go_to_setting, null, false);
-//        TextView message = (TextView) view.findViewById(R.id.fingerprint_required);
-//        TextView description = (TextView) view.findViewById(R.id.go_to_setting_description);
-//        message.setText((String) call.argument("fingerprintRequired"));
-//        description.setText((String) call.argument("goToSettingDescription"));
-//        Context context = new ContextThemeWrapper(activity, R.style.AlertDialogCustom);
-//        DialogInterface.OnClickListener goToSettingHandler =
-//                new DialogInterface.OnClickListener() {
-//                    @Override
-//                    public void onClick(DialogInterface dialog, int which) {
-//                        completionHandler.onFailure();
-//                        stop();
-//                        activity.startActivity(new Intent(Settings.ACTION_SECURITY_SETTINGS));
-//                    }
-//                };
-//        DialogInterface.OnClickListener cancelHandler =
-//                new DialogInterface.OnClickListener() {
-//                    @Override
-//                    public void onClick(DialogInterface dialog, int which) {
-//                        completionHandler.onFailure();
-//                        stop();
-//                    }
-//                };
-//        new AlertDialog.Builder(context)
-//                .setView(view)
-//                .setPositiveButton((String) call.argument("goToSetting"), goToSettingHandler)
-//                .setNegativeButton((String) call.argument("cancelButton"), cancelHandler)
-//                .setCancelable(false)
-//                .show();
-//    }
+    private void showGoToSettingsDialog() {
+        View view = LayoutInflater.from(activity).inflate(R.layout.go_to_setting, null, false);
+        TextView message = (TextView) view.findViewById(R.id.fingerprint_required);
+        TextView description = (TextView) view.findViewById(R.id.go_to_setting_description);
+        message.setText("Go to settings");
+        description.setText("Fingerprint is not set up on your device. Go to settings to set fingerprint");
+        Context context = new ContextThemeWrapper(activity, R.style.AlertDialogCustom);
+        DialogInterface.OnClickListener goToSettingHandler =
+                new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        completionHandler.onFailure(biometricPrompt);
+                        stop();
+                        activity.startActivity(new Intent(Settings.ACTION_SECURITY_SETTINGS));
+                    }
+                };
+        DialogInterface.OnClickListener cancelHandler =
+                new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        stop();
+                    }
+                };
+        new AlertDialog.Builder(context)
+                .setView(view)
+                .setPositiveButton("go to setting", goToSettingHandler)
+                .setNegativeButton("cancel", cancelHandler)
+                .setCancelable(false)
+                .show();
+    }
 
     // Unused methods for activity lifecycle.
 
