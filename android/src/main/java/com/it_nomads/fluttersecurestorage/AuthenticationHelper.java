@@ -7,6 +7,8 @@ import android.app.Application;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+
+import androidx.biometric.BiometricConstants;
 import androidx.biometric.BiometricPrompt;
 import android.os.Bundle;
 import android.os.Handler;
@@ -124,7 +126,11 @@ public class AuthenticationHelper extends BiometricPrompt.AuthenticationCallback
     @Override
     public void onAuthenticationError(int errorCode, CharSequence errString) {
         switch (errorCode) {
-
+            case BiometricConstants.ERROR_NEGATIVE_BUTTON:
+                completionHandler.onError(
+                        "negativeButton",
+                        "Phone not secured by PIN, pattern or password, or SIM is currently locked.");
+                break;
             case androidx.biometric.BiometricPrompt.ERROR_NO_DEVICE_CREDENTIAL:
                 completionHandler.onError(
                         "PasscodeNotSet",
@@ -176,7 +182,7 @@ public class AuthenticationHelper extends BiometricPrompt.AuthenticationCallback
     @Override
     public void onAuthenticationFailed() {
         Log.e("AuthFailed", "AuthFailed");
-       if (count == 2) {
+       if (count == 1) {
            completionHandler.onFailure(biometricPrompt);
            count = 0;
        }

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 void main() {
@@ -48,11 +49,15 @@ class _ItemsWidgetState extends State<ItemsWidget> {
   }
 
   void _read({String key}) async {
-    final a = await _storage.read(key: key);
-    print(a);
-    setState(() {
-      _items.add(_SecItem(key, a));
-    });
+    try {
+      final a = await _storage.read(key: key);
+      print(a);
+      setState(() {
+        _items.add(_SecItem(key, a));
+      });
+    } on PlatformException catch (e) {
+      print(e.code);
+    }
   }
 
   @override
@@ -66,7 +71,7 @@ class _ItemsWidgetState extends State<ItemsWidget> {
                 onSelected: (action) {
                   switch (action) {
                     case _Actions.deleteAll:
-                      _deleteAll();
+                      _read(key: "dddd");
                       break;
                   }
                 },
