@@ -69,7 +69,7 @@ class RSACipher18Implementation {
         return cipher.doFinal(input);
     }
 
-    private PrivateKey getPrivateKey() throws Exception {
+    public PrivateKey getPrivateKey() throws Exception {
         KeyStore ks = KeyStore.getInstance(KEYSTORE_PROVIDER_ANDROID);
         ks.load(null);
 
@@ -85,7 +85,7 @@ class RSACipher18Implementation {
         return (PrivateKey) key;
     }
 
-    private PublicKey getPublicKey() throws Exception {
+    public PublicKey getPublicKey() throws Exception {
         KeyStore ks = KeyStore.getInstance(KEYSTORE_PROVIDER_ANDROID);
         ks.load(null);
 
@@ -102,7 +102,7 @@ class RSACipher18Implementation {
         return key;
     }
 
-    private Cipher getRSACipher() throws Exception {
+    public Cipher getRSACipher() throws Exception {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
             return Cipher.getInstance("RSA/ECB/PKCS1Padding", "AndroidOpenSSL"); // error in android 6: InvalidKeyException: Need RSA private or public key
         } else {
@@ -160,7 +160,8 @@ class RSACipher18Implementation {
                     .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_RSA_PKCS1)
                     .setCertificateSerialNumber(BigInteger.valueOf(1))
                     .setCertificateNotBefore(start.getTime())
-                    .setCertificateNotAfter(end.getTime());
+                    .setCertificateNotAfter(end.getTime())
+                    .setUserAuthenticationRequired(true);
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 builder.setIsStrongBoxBacked(true);
@@ -182,6 +183,7 @@ class RSACipher18Implementation {
                     .setCertificateSerialNumber(BigInteger.valueOf(1))
                     .setCertificateNotBefore(start.getTime())
                     .setCertificateNotAfter(end.getTime())
+                    .setUserAuthenticationRequired(true)
                     .build();
             kpGenerator.initialize(spec);
             kpGenerator.generateKeyPair();

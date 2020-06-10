@@ -1,7 +1,11 @@
 package com.it_nomads.fluttersecurestorage.ciphers;
 
-public interface StorageCipher {
-  byte[] encrypt(byte[] input) throws Exception;
+import android.app.Activity;
 
-  byte[] decrypt(byte[] input) throws Exception;
+import com.it_nomads.fluttersecurestorage.AuthenticationHelper;
+
+public interface StorageCipher {
+  byte[] encrypt(byte[] input, Activity activity, AuthenticationHelper authenticationHelper) throws Exception;
+
+  byte[] decrypt(byte[] input, Activity activity, AuthenticationHelper authenticationHelper) throws Exception;
 }

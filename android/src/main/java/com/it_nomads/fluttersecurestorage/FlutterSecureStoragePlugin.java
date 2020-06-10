@@ -1,6 +1,7 @@
 package com.it_nomads.fluttersecurestorage;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Handler;
@@ -8,16 +9,27 @@ import android.os.Looper;
 import android.util.Base64;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+import androidx.biometric.BiometricPrompt;
+import androidx.fragment.app.FragmentActivity;
+import androidx.lifecycle.Lifecycle;
+
 import com.it_nomads.fluttersecurestorage.ciphers.StorageCipher;
 import com.it_nomads.fluttersecurestorage.ciphers.StorageCipher18Implementation;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
+import io.flutter.embedding.engine.plugins.activity.ActivityAware;
+import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding;
 import io.flutter.plugin.common.BinaryMessenger;
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
@@ -26,27 +38,35 @@ import io.flutter.plugin.common.MethodChannel.Result;
 import io.flutter.plugin.common.PluginRegistry.Registrar;
 
 @SuppressLint("ApplySharedPref")
-public class FlutterSecureStoragePlugin implements MethodCallHandler, FlutterPlugin {
+public class FlutterSecureStoragePlugin implements MethodCallHandler, FlutterPlugin, ActivityAware {
 
     private MethodChannel channel;
     private SharedPreferences preferences;
     private Charset charset;
     private StorageCipher storageCipher;
+    private AuthenticationHelper authenticationHelper;
+
+    private Activity activity;
+    private Lifecycle lifecycle;
     private static final String ELEMENT_PREFERENCES_KEY_PREFIX = "VGhpcyBpcyB0aGUgcHJlZml4IGZvciBhIHNlY3VyZSBzdG9yYWdlCg";
     private static final String SHARED_PREFERENCES_NAME = "FlutterSecureStorage";
     private static Context applicationContext;  //Necessary for deferred initialization of storageCipher
 
     public static void registerWith(Registrar registrar) {
-      FlutterSecureStoragePlugin instance = new FlutterSecureStoragePlugin();
+      FlutterSecureStoragePlugin instance = new FlutterSecureStoragePlugin(registrar.activity());
       instance.initInstance(registrar.messenger(), registrar.context());
+
+    }
+
+    private FlutterSecureStoragePlugin(Activity activity) {
+        this.activity = activity;
     }
 
     public void initInstance(BinaryMessenger messenger, Context context) {
       try {
           applicationContext = context.getApplicationContext();
           preferences = context.getSharedPreferences(SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE);
-          charset = Charset.forName("UTF-8");
-
+          charset = StandardCharsets.UTF_8;
           StorageCipher18Implementation.moveSecretFromPreferencesIfNeeded(preferences, context);
 
           channel = new MethodChannel(messenger, "plugins.it_nomads.com/flutter_secure_storage");
@@ -54,6 +74,55 @@ public class FlutterSecureStoragePlugin implements MethodCallHandler, FlutterPlu
       } catch (Exception e) {
           Log.e("FlutterSecureStoragePl", "Registration failed", e);
       }
+    }
+
+    private void createBioCallback(final MethodCall methodCall, final Result result) {
+        int failureCount = 0;
+        authenticationHelper = new AuthenticationHelper(lifecycle, (FragmentActivity) activity,
+                new AuthenticationHelper.AuthCompletionHandler() {
+                    @Override
+                    public void onSuccess(BiometricPrompt.CryptoObject cryptoObject) {
+                        processSuccess(cryptoObject, methodCall, result);
+                    }
+
+                    @Override
+                    public void onFailure() {
+                        result.success(null);
+                    }
+
+                    @Override
+                    public void onError(String code, String error) {
+
+                    }
+                });
+    }
+
+    private void processSuccess(BiometricPrompt.CryptoObject cryptoObject, MethodCall methodCall, Result methodResult) {
+
+
+        try {
+            if (methodCall.method.equals("write")) {
+                byte[] payload;
+                Map arguments = (Map) methodCall.arguments;
+                String key = getKeyFromCall(methodCall);
+                String value = (String) arguments.get("value");
+                payload = cryptoObject.getCipher().doFinal(value.getBytes(charset));
+                SharedPreferences.Editor editor = preferences.edit();
+
+                editor.putString(key, Base64.encodeToString(payload, 0));
+                editor.commit();
+            } else if (methodCall.method.equals("read")) {
+                Map arguments = (Map) methodCall.arguments;
+                String key = getKeyFromCall(methodCall);
+                String encoded = preferences.getString(key, null);
+                byte[] data = Base64.decode(encoded, 0);
+                byte[] result = cryptoObject.getCipher().doFinal(data);
+                methodResult.success(new String(result, charset));
+            }
+
+        } catch (BadPaddingException | IllegalBlockSizeException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -123,8 +192,8 @@ public class FlutterSecureStoragePlugin implements MethodCallHandler, FlutterPlu
         editor.commit();
     }
 
-    private void write(String key, String value) throws Exception {
-        byte[] result = storageCipher.encrypt(value.getBytes(charset));
+    private void write(final String key, final String value) throws Exception {
+        byte[] result = storageCipher.encrypt(value.getBytes(charset), activity, authenticationHelper);
         SharedPreferences.Editor editor = preferences.edit();
 
         editor.putString(key, Base64.encodeToString(result, 0));
@@ -133,8 +202,12 @@ public class FlutterSecureStoragePlugin implements MethodCallHandler, FlutterPlu
 
     private String read(String key) throws Exception {
         String encoded = preferences.getString(key, null);
-
-        return decodeRawValue(encoded);
+        if (encoded == null) {
+            return null;
+        }
+        byte[] data = Base64.decode(encoded, 0);
+        byte[] result = storageCipher.decrypt(data, activity, authenticationHelper);
+        return encoded;
     }
 
     private void delete(String key) {
@@ -153,7 +226,7 @@ public class FlutterSecureStoragePlugin implements MethodCallHandler, FlutterPlu
             return null;
         }
         byte[] data = Base64.decode(value, 0);
-        byte[] result = storageCipher.decrypt(data);
+        byte[] result = storageCipher.decrypt(data, activity, authenticationHelper);
 
         return new String(result, charset);
     }
@@ -174,6 +247,7 @@ public class FlutterSecureStoragePlugin implements MethodCallHandler, FlutterPlu
         public void run() {
             try {
                 ensureInitStorageCipher();
+                createBioCallback(call, result);
                 switch (call.method) {
                     case "write": {
                         String key = getKeyFromCall(call);
@@ -188,7 +262,6 @@ public class FlutterSecureStoragePlugin implements MethodCallHandler, FlutterPlu
                         String key = getKeyFromCall(call);
 
                         String value = read(key);
-                        result.success(value);
                         break;
                     }
                     case "readAll": {
@@ -262,5 +335,30 @@ public class FlutterSecureStoragePlugin implements MethodCallHandler, FlutterPlu
                 }
             });
         }
+    }
+
+    @Override
+    public void onAttachedToActivity(@NonNull ActivityPluginBinding binding) {
+        activity = binding.getActivity();
+        channel.setMethodCallHandler(this);
+
+    }
+
+    @Override
+    public void onDetachedFromActivityForConfigChanges() {
+        lifecycle = null;
+        activity = null;
+    }
+
+    @Override
+    public void onReattachedToActivityForConfigChanges(@NonNull ActivityPluginBinding binding) {
+        activity = binding.getActivity();
+    }
+
+    @Override
+    public void onDetachedFromActivity() {
+        activity = null;
+        lifecycle = null;
+        channel.setMethodCallHandler(null);
     }
 }

@@ -26,12 +26,18 @@ android {
     buildToolsVersion '28.0.3'
 
     defaultConfig {
-        minSdkVersion 18
+        minSdkVersion 23
         targetSdkVersion 28
         versionCode 6
         versionName "3.3.1"
     }
     lintOptions {
         disable 'InvalidPackage'
+    }
+
+    dependencies {
+        api "androidx.core:core:1.1.0-beta01"
+        api "androidx.biometric:biometric:1.0.0-beta01"
+        api "androidx.fragment:fragment:1.1.0-alpha06"
     }
 }

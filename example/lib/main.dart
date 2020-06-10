@@ -25,7 +25,7 @@ class _ItemsWidgetState extends State<ItemsWidget> {
   void initState() {
     super.initState();
 
-    _readAll();
+    _read(key: "dddd");
   }
 
   Future<Null> _readAll() async {
@@ -41,11 +41,18 @@ class _ItemsWidgetState extends State<ItemsWidget> {
   }
 
   void _addNewItem() async {
-    final String key = _randomValue();
+    final String key = "dddd";
     final String value = _randomValue();
 
     await _storage.write(key: key, value: value);
-    _readAll();
+  }
+
+  void _read({String key}) async {
+    final a = await _storage.read(key: key);
+    print(a);
+    setState(() {
+      _items.add(_SecItem(key, a));
+    });
   }
 
   @override
