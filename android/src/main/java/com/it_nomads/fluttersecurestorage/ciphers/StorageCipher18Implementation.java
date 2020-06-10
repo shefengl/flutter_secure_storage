@@ -89,7 +89,7 @@ public class StorageCipher18Implementation implements StorageCipher {
 //        System.arraycopy(iv, 0, combined, 0, iv.length);
 //        System.arraycopy(payload, 0, combined, iv.length, payload.length);
 
-        return cipher.doFinal(input);
+        return iv;
     }
 
     @Override

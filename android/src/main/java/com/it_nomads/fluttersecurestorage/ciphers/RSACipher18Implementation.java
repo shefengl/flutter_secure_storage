@@ -10,9 +10,12 @@ import android.security.keystore.StrongBoxUnavailableException;
 import android.util.Log;
 
 import java.math.BigInteger;
+import java.security.InvalidAlgorithmParameterException;
 import java.security.Key;
 import java.security.KeyPairGenerator;
 import java.security.KeyStore;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.cert.Certificate;
@@ -21,6 +24,7 @@ import java.util.Calendar;
 import java.util.Locale;
 
 import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
 import javax.security.auth.x500.X500Principal;
 
 class RSACipher18Implementation {
@@ -84,6 +88,20 @@ class RSACipher18Implementation {
 
         return (PrivateKey) key;
     }
+
+    public Key getKey() throws Exception {
+        KeyStore ks = KeyStore.getInstance(KEYSTORE_PROVIDER_ANDROID);
+        ks.load(null);
+
+        Key key = ks.getKey(KEY_ALIAS, null);
+        if (key == null) {
+            throw new Exception("No key found under alias: " + KEY_ALIAS);
+        }
+
+        return key;
+    }
+
+
 
     public PublicKey getPublicKey() throws Exception {
         KeyStore ks = KeyStore.getInstance(KEYSTORE_PROVIDER_ANDROID);
@@ -189,5 +207,30 @@ class RSACipher18Implementation {
             kpGenerator.generateKeyPair();
         }
         setLocale(localeBeforeFakingEnglishLocale);
+    }
+
+    private void createKeyAes(Context context) {
+        KeyGenParameterSpec.Builder paramsBuilder = new KeyGenParameterSpec.Builder(KEY_ALIAS,
+                KeyProperties.PURPOSE_ENCRYPT | KeyProperties.PURPOSE_DECRYPT)
+                .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                .setKeySize(256)
+                .setUserAuthenticationRequired(true);
+
+
+        KeyGenParameterSpec keyGenParams = paramsBuilder.build();
+        KeyGenerator keyGenerator = null;
+        try {
+            keyGenerator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES,
+                    KEYSTORE_PROVIDER_ANDROID);
+        } catch (NoSuchAlgorithmException | NoSuchProviderException e) {
+            e.printStackTrace();
+        }
+        try {
+            keyGenerator.init(keyGenParams);
+        } catch (InvalidAlgorithmParameterException e) {
+            e.printStackTrace();
+        }
+        keyGenerator.generateKey();
     }
 }
