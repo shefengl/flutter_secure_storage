@@ -316,6 +316,7 @@ public class FlutterSecureStoragePlugin implements MethodCallHandler, FlutterPlu
             } catch (Exception e) {
                 StringWriter stringWriter = new StringWriter();
                 e.printStackTrace(new PrintWriter(stringWriter));
+                authInProgress.compareAndSet(true, false);
                 result.error("Exception encountered", call.method, stringWriter.toString());
             }
         }

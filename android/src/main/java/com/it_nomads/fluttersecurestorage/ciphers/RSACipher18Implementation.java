@@ -22,6 +22,8 @@ import java.security.cert.Certificate;
 import java.security.spec.AlgorithmParameterSpec;
 import java.util.Calendar;
 import java.util.Locale;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
 
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
@@ -99,6 +101,37 @@ class RSACipher18Implementation {
         }
 
         return key;
+    }
+
+    public void deleteKey() throws Exception {
+        KeyStore ks = KeyStore.getInstance(KEYSTORE_PROVIDER_ANDROID);
+        ks.load(null);
+
+        ks.deleteEntry(KEY_ALIAS);
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+            CompletableFuture<Long> task = CompletableFuture.supplyAsync(new Supplier<Long>() {
+                @Override
+                public Long get() {
+                    try {
+                        createRSAKeysIfNeeded(context);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    return null;
+                }
+            });
+        } else {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        createRSAKeysIfNeeded(context);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }).start();
+        }
     }
 
 

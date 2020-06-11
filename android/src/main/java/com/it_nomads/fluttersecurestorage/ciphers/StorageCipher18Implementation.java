@@ -4,6 +4,7 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.security.keystore.KeyPermanentlyInvalidatedException;
 import android.util.Base64;
 import android.util.Log;
 
@@ -73,8 +74,12 @@ public class StorageCipher18Implementation implements StorageCipher {
         secureRandom.nextBytes(iv);
 
         IvParameterSpec ivParameterSpec = new IvParameterSpec(iv);
-
-        cipher.init(Cipher.ENCRYPT_MODE, mRsaCipher.getPublicKey());
+        try {
+            cipher.init(Cipher.ENCRYPT_MODE, mRsaCipher.getPublicKey());
+        } catch (KeyPermanentlyInvalidatedException e) {
+            mRsaCipher.deleteKey();
+            throw e;
+        }
 
         activity.runOnUiThread(new Runnable() {
             @Override
@@ -101,9 +106,12 @@ public class StorageCipher18Implementation implements StorageCipher {
 //        int payloadSize = input.length - ivSize;
 //        byte[] payload = new byte[payloadSize];
 //        System.arraycopy(input, iv.length, payload, 0, payloadSize);
-
-        cipher.init(Cipher.DECRYPT_MODE, mRsaCipher.getPrivateKey());
-        Log.e("re", "read");
+        try {
+            cipher.init(Cipher.DECRYPT_MODE, mRsaCipher.getPrivateKey());
+        } catch (KeyPermanentlyInvalidatedException e) {
+            mRsaCipher.deleteKey();
+            throw e;
+        }
 
         activity.runOnUiThread(new Runnable() {
             @Override
