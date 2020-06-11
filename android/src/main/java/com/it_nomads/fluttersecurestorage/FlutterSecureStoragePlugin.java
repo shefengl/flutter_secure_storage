@@ -129,6 +129,7 @@ public class FlutterSecureStoragePlugin implements MethodCallHandler, FlutterPlu
 
                 editor.putString(key, Base64.encodeToString(payload, 0));
                 editor.commit();
+                methodResult.success(null);
             } else if (methodCall.method.equals("read")) {
                 Map arguments = (Map) methodCall.arguments;
                 String key = getKeyFromCall(methodCall);
@@ -278,7 +279,6 @@ public class FlutterSecureStoragePlugin implements MethodCallHandler, FlutterPlu
 
                         String value = (String) arguments.get("value");
                         write(key, value);
-                        result.success(null);
                         break;
                     }
                     case "read": {
