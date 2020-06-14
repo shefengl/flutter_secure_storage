@@ -12,6 +12,7 @@ import androidx.biometric.BiometricPrompt;
 
 import com.it_nomads.fluttersecurestorage.AuthenticationHelper;
 
+import java.security.InvalidAlgorithmParameterException;
 import java.security.Key;
 import java.security.PublicKey;
 import java.security.SecureRandom;
@@ -19,6 +20,8 @@ import java.security.SecureRandom;
 import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+
+import static androidx.biometric.BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED;
 
 @SuppressLint("ApplySharedPref")
 public class StorageCipher18Implementation implements StorageCipher {
@@ -50,7 +53,7 @@ public class StorageCipher18Implementation implements StorageCipher {
             byte[] encrypted;
             try {
                 encrypted = Base64.decode(aesKey, Base64.DEFAULT);
-                secretKey = mRsaCipher.getPublicKey();
+//                secretKey = mRsaCipher.getPublicKey();
                 return;
             } catch (Exception e) {
                 Log.e("StorageCipher18Impl", "unwrap key failed", e);
@@ -61,11 +64,11 @@ public class StorageCipher18Implementation implements StorageCipher {
         byte[] key = new byte[keySize];
         secureRandom.nextBytes(key);
 //        secretKey = new SecretKeySpec(key, KEY_ALGORITHM);
-        secretKey = mRsaCipher.getPublicKey();
+//        secretKey = mRsaCipher.getPublicKey();
 
 //        byte[] encryptedKey = rsaCipher.wrap(secretKey);
-        editor.putString(AES_PREFERENCES_KEY, Base64.encodeToString(secretKey.getEncoded(), Base64.DEFAULT));
-        editor.commit();
+//        editor.putString(AES_PREFERENCES_KEY, Base64.encodeToString(secretKey.getEncoded(), Base64.DEFAULT));
+//        editor.commit();
     }
 
     @Override
@@ -75,6 +78,15 @@ public class StorageCipher18Implementation implements StorageCipher {
 
         IvParameterSpec ivParameterSpec = new IvParameterSpec(iv);
         try {
+            if (authenticationHelper.canAuthenticate() == BIOMETRIC_ERROR_NONE_ENROLLED) {
+                activity.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        authenticationHelper.authenticate(new BiometricPrompt.CryptoObject(cipher));
+                    }
+                });
+                return iv;
+            }
             cipher.init(Cipher.ENCRYPT_MODE, mRsaCipher.getPublicKey());
         } catch (KeyPermanentlyInvalidatedException e) {
             mRsaCipher.deleteKey();
@@ -107,8 +119,18 @@ public class StorageCipher18Implementation implements StorageCipher {
 //        byte[] payload = new byte[payloadSize];
 //        System.arraycopy(input, iv.length, payload, 0, payloadSize);
         try {
+            if (authenticationHelper.canAuthenticate() == BIOMETRIC_ERROR_NONE_ENROLLED) {
+                activity.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        authenticationHelper.authenticate(new BiometricPrompt.CryptoObject(cipher));
+                    }
+                });
+                return iv;
+            }
             cipher.init(Cipher.DECRYPT_MODE, mRsaCipher.getPrivateKey());
-        } catch (KeyPermanentlyInvalidatedException e) {
+        } catch (KeyPermanentlyInvalidatedException | InvalidAlgorithmParameterException e) {
+            Log.e("exception", e.getMessage());
             mRsaCipher.deleteKey();
             throw e;
         }

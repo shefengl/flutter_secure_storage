@@ -38,6 +38,8 @@ import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
 import io.flutter.plugin.common.MethodChannel.Result;
 import io.flutter.plugin.common.PluginRegistry.Registrar;
 
+import static androidx.biometric.BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED;
+
 @SuppressLint("ApplySharedPref")
 public class FlutterSecureStoragePlugin implements MethodCallHandler, FlutterPlugin, ActivityAware {
 
@@ -109,6 +111,9 @@ public class FlutterSecureStoragePlugin implements MethodCallHandler, FlutterPlu
                     @Override
                     public void onError(String code, String error) {
                         if (authInProgress.compareAndSet(true, false)) {
+                            if (code.equals("No Biometric") ) {
+                                storageCipher = null;
+                            }
                             result.error(code, error, null);
                         }
                     }
@@ -222,6 +227,7 @@ public class FlutterSecureStoragePlugin implements MethodCallHandler, FlutterPlu
     private String read(String key) throws Exception {
         String encoded = preferences.getString(key, null);
         if (encoded == null) {
+            authInProgress.compareAndSet(true, false);
             return null;
         }
         byte[] data = Base64.decode(encoded, 0);

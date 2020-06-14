@@ -9,6 +9,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 
 import androidx.biometric.BiometricConstants;
+import androidx.biometric.BiometricManager;
 import androidx.biometric.BiometricPrompt;
 import android.os.Bundle;
 import android.os.Handler;
@@ -68,6 +69,7 @@ public class AuthenticationHelper extends BiometricPrompt.AuthenticationCallback
     private final UiThreadExecutor uiThreadExecutor;
     private boolean activityPaused = false;
     private androidx.biometric.BiometricPrompt biometricPrompt;
+    private BiometricManager biometricManager;
     private int count = 0;
 
     AuthenticationHelper(
@@ -86,6 +88,7 @@ public class AuthenticationHelper extends BiometricPrompt.AuthenticationCallback
                         .setSubtitle("please login to get access")
                         .setNegativeButtonText("Cancel")
                         .build();
+        this.biometricManager = BiometricManager.from(activity);
     }
 
     /**
@@ -99,6 +102,10 @@ public class AuthenticationHelper extends BiometricPrompt.AuthenticationCallback
         }
         biometricPrompt = new BiometricPrompt(activity, uiThreadExecutor, this);
         biometricPrompt.authenticate(promptInfo, cryptoObject);
+    }
+
+    public int canAuthenticate() {
+       return  biometricManager.canAuthenticate();
     }
 
     /**
@@ -140,6 +147,9 @@ public class AuthenticationHelper extends BiometricPrompt.AuthenticationCallback
             case androidx.biometric.BiometricPrompt.ERROR_NO_BIOMETRICS:
 
                     showGoToSettingsDialog();
+                completionHandler.onError(
+                        "No Biometric",
+                        "Phone not secured by PIN, pattern or password, or SIM is currently locked.");
                 break;
             case androidx.biometric.BiometricPrompt.ERROR_HW_UNAVAILABLE:
             case androidx.biometric.BiometricPrompt.ERROR_HW_NOT_PRESENT:

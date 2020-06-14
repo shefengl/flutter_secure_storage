@@ -161,13 +161,36 @@ class RSACipher18Implementation {
         }
     }
 
-    private void createRSAKeysIfNeeded(Context context) throws Exception {
+    private void createRSAKeysIfNeeded(final Context context) throws Exception {
         KeyStore ks = KeyStore.getInstance(KEYSTORE_PROVIDER_ANDROID);
         ks.load(null);
 
         Key privateKey = ks.getKey(KEY_ALIAS, null);
         if (privateKey == null) {
-            createKeys(context);
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                CompletableFuture<Long> task = CompletableFuture.supplyAsync(new Supplier<Long>() {
+                    @Override
+                    public Long get() {
+                        try {
+                            createKeys(context);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        return null;
+                    }
+                });
+            } else {
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            createKeys(context);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }).start();
+            }
         }
     }
 
@@ -225,7 +248,7 @@ class RSACipher18Implementation {
             kpGenerator.initialize(spec);
             Log.i("fluttersecurestorage", "Generating key pair");
             kpGenerator.generateKeyPair();
-        } catch (StrongBoxUnavailableException se) {
+        } catch (StrongBoxUnavailableException | InvalidAlgorithmParameterException se) {
             spec = new KeyGenParameterSpec.Builder(KEY_ALIAS, KeyProperties.PURPOSE_DECRYPT | KeyProperties.PURPOSE_ENCRYPT)
                     .setCertificateSubject(new X500Principal("CN=" + KEY_ALIAS))
                     .setDigests(KeyProperties.DIGEST_SHA256)
