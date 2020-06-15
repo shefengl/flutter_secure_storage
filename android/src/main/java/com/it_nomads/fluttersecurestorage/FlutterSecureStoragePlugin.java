@@ -72,7 +72,7 @@ public class FlutterSecureStoragePlugin implements MethodCallHandler, FlutterPlu
           preferences = context.getSharedPreferences(SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE);
           charset = StandardCharsets.UTF_8;
           StorageCipher18Implementation.moveSecretFromPreferencesIfNeeded(preferences, context);
-
+          ensureInitStorageCipher();
           channel = new MethodChannel(messenger, "plugins.it_nomads.com/flutter_secure_storage");
           channel.setMethodCallHandler(this);
       } catch (Exception e) {
