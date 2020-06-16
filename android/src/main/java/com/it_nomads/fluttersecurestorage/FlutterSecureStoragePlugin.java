@@ -93,17 +93,19 @@ public class FlutterSecureStoragePlugin implements MethodCallHandler, FlutterPlu
 
                     @Override
                     public void onFailure(final BiometricPrompt biometricPrompt) {
-                        if (authInProgress.compareAndSet(true, false)) {
-                            result.success(null);
-                            if (biometricPrompt != null) {
-                                Handler timoutHandler = new Handler();
-                                timoutHandler.postDelayed(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        biometricPrompt.cancelAuthentication();
-                                    }
-                                }, 3000);
+                        if (methodCall.method.equals("read")) {
+                            if (authInProgress.compareAndSet(true, false)) {
+                                result.success(null);
+                                if (biometricPrompt != null) {
+                                    Handler timoutHandler = new Handler();
+                                    timoutHandler.postDelayed(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            biometricPrompt.cancelAuthentication();
+                                        }
+                                    }, 3000);
 
+                                }
                             }
                         }
                     }
