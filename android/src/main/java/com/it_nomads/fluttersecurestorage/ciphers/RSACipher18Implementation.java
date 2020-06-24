@@ -18,6 +18,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.UnrecoverableKeyException;
 import java.security.cert.Certificate;
 import java.security.spec.AlgorithmParameterSpec;
 import java.util.Calendar;
@@ -165,31 +166,42 @@ class RSACipher18Implementation {
         KeyStore ks = KeyStore.getInstance(KEYSTORE_PROVIDER_ANDROID);
         ks.load(null);
 
-        Key privateKey = ks.getKey(KEY_ALIAS, null);
-        if (privateKey == null) {
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
-                CompletableFuture<Long> task = CompletableFuture.supplyAsync(new Supplier<Long>() {
-                    @Override
-                    public Long get() {
-                        try {
-                            createKeys(context);
-                        } catch (Exception e) {
-                            e.printStackTrace();
+        try {
+            Key privateKey = ks.getKey(KEY_ALIAS, null);
+            if (privateKey == null) {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                    CompletableFuture<Long> task = CompletableFuture.supplyAsync(new Supplier<Long>() {
+                        @Override
+                        public Long get() {
+                            try {
+                                createKeys(context);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                            return null;
                         }
-                        return null;
-                    }
-                });
-            } else {
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            createKeys(context);
-                        } catch (Exception e) {
-                            e.printStackTrace();
+                    });
+                } else {
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                createKeys(context);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
                         }
-                    }
-                }).start();
+                    }).start();
+                }
+            }
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            Log.e("get Key exception", e.getMessage());
+            try {
+                createKeys(context);
+            } catch (Exception error) {
+                error.printStackTrace();
             }
         }
     }
@@ -248,7 +260,7 @@ class RSACipher18Implementation {
             kpGenerator.initialize(spec);
             Log.i("fluttersecurestorage", "Generating key pair");
             kpGenerator.generateKeyPair();
-        } catch (StrongBoxUnavailableException | InvalidAlgorithmParameterException se) {
+        } catch (StrongBoxUnavailableException e) {
             spec = new KeyGenParameterSpec.Builder(KEY_ALIAS, KeyProperties.PURPOSE_DECRYPT | KeyProperties.PURPOSE_ENCRYPT)
                     .setCertificateSubject(new X500Principal("CN=" + KEY_ALIAS))
                     .setDigests(KeyProperties.DIGEST_SHA256)
@@ -259,6 +271,7 @@ class RSACipher18Implementation {
                     .setCertificateNotAfter(end.getTime())
                     .setUserAuthenticationRequired(true)
                     .build();
+            Log.e("exception called", "called");
             kpGenerator.initialize(spec);
             kpGenerator.generateKeyPair();
         }

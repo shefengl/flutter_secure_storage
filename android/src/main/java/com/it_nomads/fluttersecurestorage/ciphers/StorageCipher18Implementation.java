@@ -126,6 +126,7 @@ public class StorageCipher18Implementation implements StorageCipher {
                         authenticationHelper.authenticate(new BiometricPrompt.CryptoObject(cipher));
                     }
                 });
+//                mRsaCipher.deleteKey();
                 return iv;
             }
             cipher.init(Cipher.DECRYPT_MODE, mRsaCipher.getPrivateKey());

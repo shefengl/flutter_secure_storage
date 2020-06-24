@@ -156,7 +156,10 @@ public class FlutterSecureStoragePlugin implements MethodCallHandler, FlutterPlu
      * live devices in release mode.
      * The most convenient place for that appears to be onMethodCall().
      */
-    private void ensureInitStorageCipher() {
+    private void ensureInitStorageCipher() throws Exception {
+        if (authenticationHelper != null) {
+            Log.e("biometric check", String.valueOf(authenticationHelper.canAuthenticate()));
+        }
         if(storageCipher == null) { //Check to avoid unnecessary entry into syncronized block
             synchronized (this) {
                 if(storageCipher == null) { //Check inside sync block to avoid race condition.
@@ -273,8 +276,9 @@ public class FlutterSecureStoragePlugin implements MethodCallHandler, FlutterPlu
         @Override
         public void run() {
             try {
-                ensureInitStorageCipher();
+
                 createBioCallback(call, result);
+                ensureInitStorageCipher();
                 switch (call.method) {
                     case "write": {
                         if (authInProgress.get()){
@@ -325,6 +329,7 @@ public class FlutterSecureStoragePlugin implements MethodCallHandler, FlutterPlu
                 StringWriter stringWriter = new StringWriter();
                 e.printStackTrace(new PrintWriter(stringWriter));
                 authInProgress.compareAndSet(true, false);
+                Log.e("Method Exception", stringWriter.toString());
                 result.error("Exception encountered", call.method, stringWriter.toString());
             }
         }
