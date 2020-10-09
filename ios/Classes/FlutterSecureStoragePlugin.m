@@ -114,8 +114,9 @@ static NSString *const InvalidParameters = @"Invalid parameter's type";
     secControl =  SecAccessControlCreateWithFlags(kCFAllocatorDefault, attrAccessible, kSecAccessControlBiometryAny, error);
     
     OSStatus status;
-    status = SecItemCopyMatching((__bridge CFDictionaryRef)search, NULL);
-    if (status == noErr){
+    NSString *isContain = [self contain:key forGroup:groupId];
+//    status = SecItemCopyMatching((__bridge CFDictionaryRef)search, NULL);
+    if ([isContain isEqualToString:@"true"]){
         search[(__bridge id)kSecMatchLimit] = nil;
         
         NSDictionary *update = @{
@@ -131,7 +132,7 @@ static NSString *const InvalidParameters = @"Invalid parameter's type";
         search[(__bridge id)kSecValueData] = [value dataUsingEncoding:NSUTF8StringEncoding];
         search[(__bridge id)kSecMatchLimit] = nil;
         search[(__bridge id)kSecAttrAccessControl] = (__bridge_transfer id) secControl;
-
+        
         status = SecItemAdd((__bridge CFDictionaryRef)search, NULL);
         if (status != noErr){
             NSLog(@"SecItemAdd status = %d", (int) status);
